@@ -14,39 +14,10 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Cache Flutter SDK
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.flutter
-          ~/development/flutter
-        key: ${{ runner.os }}-flutter-sdk-3.24.3-${{ hashFiles('**/pubspec.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-flutter-sdk-3.24.3-
-          ${{ runner.os }}-flutter-sdk-
-
-    - name: Cache Gradle
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
-
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
         flutter-version: '3.24.3'
-
-    - name: Cache Flutter dependencies
-      uses: actions/cache@v3
-      with:
-        path: build/.flutter
-        key: ${{ runner.os }}-flutter-deps-${{ hashFiles('**/pubspec.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-flutter-deps-
 
     - name: Install dependencies
       run: flutter pub get
@@ -70,44 +41,16 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Cache Flutter SDK
-      uses: actions/cache@v3
-      with:
-        path: |
-          C:\flutter
-          ~\AppData\Local\Pub\Cache
-          ~\AppData\Local\flutter
-        key: ${{ runner.os }}-flutter-sdk-3.24.3-${{ hashFiles('**/pubspec.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-flutter-sdk-3.24.3-
-          ${{ runner.os }}-flutter-sdk-
-
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
         flutter-version: '3.24.3'
-
-    - name: Cache Flutter dependencies
-      uses: actions/cache@v3
-      with:
-        path: build/.flutter
-        key: ${{ runner.os }}-flutter-deps-${{ hashFiles('**/pubspec.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-flutter-deps-
 
     - name: Install dependencies
       run: flutter pub get
 
     - name: Generate localization files
       run: dart run intl_utils:generate
-
-    - name: Cache Python packages
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
 
     - name: Install PyYAML
       run: pip install pyyaml
