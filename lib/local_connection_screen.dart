@@ -242,7 +242,7 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
       } else {
         await passwordManager.mergeEntries(newEntries);
         UIHelper.showSnackBar(
-            S.of(context).mergeFunctionalityWorkInProgress); // Localized string
+            S.of(context).entriesAddedSuccessfully); // Localized string
       }
       await socket.close();
     });
