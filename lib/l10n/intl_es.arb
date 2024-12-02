@@ -124,5 +124,12 @@
   "waitingForSender": "Esperando un remitente...",
   "searchingForReceivers": "Buscando receptores...",
   "retry": "Reintentar",
-  "receiverSentMessage": "{name} ha enviado datos."
+  "receiverSentMessage": "{name} ha enviado datos.",
+  "@receiverSentMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }

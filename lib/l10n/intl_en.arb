@@ -124,5 +124,12 @@
   "waitingForSender": "Waiting for a sender...",
   "searchingForReceivers": "Searching for receivers...",
   "retry": "Retry",
-  "receiverSentMessage": "{name} sent data."
+  "receiverSentMessage": "{name} sent data.",
+  "@receiverSentMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }
