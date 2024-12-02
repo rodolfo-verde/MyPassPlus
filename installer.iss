@@ -2,8 +2,6 @@
 AppName=MyPass+
 AppVersion=0.0.3
 AppVerName=MyPass+
-AppPublisher=rfvc
-AppPublisherURL=https://github.com/rodolfo-verde
 DefaultDirName={pf}\MyPass+
 DefaultGroupName=MyPass+
 OutputDir=.
