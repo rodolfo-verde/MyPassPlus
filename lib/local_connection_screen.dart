@@ -42,33 +42,67 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
   }
 
   Future<void> _discoverReceivers() async {
-    final RawDatagramSocket socket =
-        await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
-    socket.broadcastEnabled = true;
-    _discoverySocket = socket;
-    socket.listen((RawSocketEvent event) {
-      if (event == RawSocketEvent.read) {
-        Datagram? datagram = socket.receive();
-        if (datagram != null) {
-          String message = String.fromCharCodes(datagram.data);
-          if (message == 'RECEIVER_HERE') {
-            setState(() {
-              _availableReceivers.add(datagram.address.address);
-            });
+    // Get all network interfaces
+    final interfaces = await NetworkInterface.list();
+    final validInterfaces = interfaces.where((interface) => interface.addresses
+        .any((addr) => addr.type == InternetAddressType.IPv4));
+
+    for (var interface in validInterfaces) {
+      if (!mounted) return; // Check if widget is still mounted
+
+      try {
+        final addr = interface.addresses
+            .firstWhere((addr) => addr.type == InternetAddressType.IPv4);
+
+        final socket = await RawDatagramSocket.bind(addr, 0);
+        socket.broadcastEnabled = true;
+        _discoverySocket = socket;
+
+        print('Binding to interface: ${interface.name} (${addr.address})');
+
+        socket.listen((RawSocketEvent event) {
+          if (event == RawSocketEvent.read) {
+            Datagram? datagram = socket.receive();
+            if (datagram != null) {
+              String message = String.fromCharCodes(datagram.data);
+              print(
+                  'Received message: $message from ${datagram.address.address}');
+              if (message == 'RECEIVER_HERE') {
+                setState(() {
+                  if (!_availableReceivers.contains(datagram.address.address)) {
+                    _availableReceivers.add(datagram.address.address);
+                  }
+                });
+              }
+            }
           }
-        }
+        });
+
+        // Send broadcast on this interface
+        print('Sending discovery message on ${addr.address}');
+        socket.send(utf8.encode('DISCOVER_RECEIVERS'),
+            InternetAddress('255.255.255.255'), 4568);
+      } catch (e) {
+        print('Error on interface ${interface.name}: $e');
       }
-    });
-    // Broadcast message to discover receivers
-    socket.send(utf8.encode('DISCOVER_RECEIVERS'),
-        InternetAddress('255.255.255.255'), 4568);
-    // Wait for a few seconds to gather responses
-    await Future.delayed(Duration(seconds: 3));
-    socket.close();
+    }
+
+    // Wait longer for responses on PC
+    await Future.delayed(Duration(seconds: 5));
+    if (!mounted) return; // Check if widget is still mounted
+
+    _discoverySocket?.close();
+
     if (_availableReceivers.isEmpty) {
-      UIHelper.showSnackBar(S.of(context).noReceiversFound); // Localized string
+      if (mounted) {
+        // Check before showing snackbar
+        UIHelper.showSnackBar(S.of(context).noReceiversFound);
+      }
     } else {
-      _showReceiverSelectionDialog();
+      if (mounted) {
+        // Check before showing dialog
+        _showReceiverSelectionDialog();
+      }
     }
   }
 
@@ -100,6 +134,8 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
   }
 
   Future<void> _sendData() async {
+    if (!mounted) return; // Check if widget is still mounted
+
     final passwordManager =
         Provider.of<PasswordManager>(context, listen: false);
     final data = passwordManager.entries.map((entry) {
@@ -116,15 +152,24 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
     socket.add(encryptedData);
     await socket.flush();
     await socket.close();
-    UIHelper.showSnackBar(
-        S.of(context).dataSentSuccessfully); // Localized string
+    if (mounted) {
+      // Check before showing snackbar
+      UIHelper.showSnackBar(S.of(context).dataSentSuccessfully);
+    }
   }
 
   Future<void> _receiveData() async {
+    if (!mounted) return; // Check if widget is still mounted
+
     final server =
         await ServerSocket.bind(InternetAddress.anyIPv4, 4567, shared: true);
     _serverSocket = server;
     server.listen((Socket socket) async {
+      if (!mounted) {
+        socket.close();
+        return;
+      }
+
       final encryptedData = await socket.fold<Uint8List>(
           Uint8List(0), (buffer, data) => Uint8List.fromList(buffer + data));
       final jsonData = _decryptData(encryptedData);
@@ -160,9 +205,13 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
           );
         },
       );
+
+      if (!mounted) return; // Check if widget is still mounted
+
       if (replace == null) {
-        UIHelper.showSnackBar(
-            S.of(context).importCancelled); // Localized string
+        if (mounted) {
+          UIHelper.showSnackBar(S.of(context).importCancelled);
+        }
         return;
       }
       if (replace == true) {
