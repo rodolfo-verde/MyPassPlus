@@ -9,6 +9,25 @@ import 'ui_helper.dart';
 import 'password_entry.dart';
 import 'generated/l10n.dart'; // Import for localization
 
+class EncryptedPackage {
+  final Uint8List encryptedData;
+  final Uint8List iv;
+
+  EncryptedPackage(this.encryptedData, this.iv);
+
+  Map<String, dynamic> toJson() => {
+        'encryptedData': base64Encode(encryptedData),
+        'iv': base64Encode(iv),
+      };
+
+  factory EncryptedPackage.fromJson(Map<String, dynamic> json) {
+    return EncryptedPackage(
+      base64Decode(json['encryptedData']),
+      base64Decode(json['iv']),
+    );
+  }
+}
+
 class LocalConnectionScreen extends StatefulWidget {
   final bool isSender;
   const LocalConnectionScreen({super.key, required this.isSender});
@@ -147,9 +166,9 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
       };
     }).toList();
     final jsonData = jsonEncode(data);
-    final encryptedData = _encryptData(jsonData);
+    final encryptedPackage = _encryptData(jsonData);
     final socket = await Socket.connect(_receiverIp, 4567);
-    socket.add(encryptedData);
+    socket.add(utf8.encode(jsonEncode(encryptedPackage.toJson())));
     await socket.flush();
     await socket.close();
     if (mounted) {
@@ -170,9 +189,11 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
         return;
       }
 
-      final encryptedData = await socket.fold<Uint8List>(
+      final receivedData = await socket.fold<Uint8List>(
           Uint8List(0), (buffer, data) => Uint8List.fromList(buffer + data));
-      final jsonData = _decryptData(encryptedData);
+      final packageJson = jsonDecode(utf8.decode(receivedData));
+      final encryptedPackage = EncryptedPackage.fromJson(packageJson);
+      final jsonData = _decryptData(encryptedPackage);
       final data = jsonDecode(jsonData) as List<dynamic>;
       final passwordManager =
           Provider.of<PasswordManager>(context, listen: false);
@@ -243,21 +264,20 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
     });
   }
 
-  Uint8List _encryptData(String data) {
+  EncryptedPackage _encryptData(String data) {
     final key = encrypt.Key.fromUtf8(_encryptionKey);
-    final iv = encrypt.IV.fromLength(16);
+    final iv = encrypt.IV.fromSecureRandom(16);
     final encrypter = encrypt.Encrypter(encrypt.AES(key));
     final encrypted = encrypter.encrypt(data, iv: iv);
-    return Uint8List.fromList(encrypted.bytes);
+    return EncryptedPackage(encrypted.bytes, iv.bytes);
   }
 
-  String _decryptData(Uint8List encryptedData) {
+  String _decryptData(EncryptedPackage package) {
     final key = encrypt.Key.fromUtf8(_encryptionKey);
-    final iv = encrypt.IV.fromLength(16);
+    final iv = encrypt.IV(package.iv);
     final encrypter = encrypt.Encrypter(encrypt.AES(key));
-    final encrypted = encrypt.Encrypted(encryptedData);
-    final decrypted = encrypter.decrypt(encrypted, iv: iv);
-    return decrypted;
+    final encrypted = encrypt.Encrypted(package.encryptedData);
+    return encrypter.decrypt(encrypted, iv: iv);
   }
 
   @override
