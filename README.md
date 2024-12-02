@@ -20,12 +20,12 @@ A simple and secure password manager for Windows and Android that helps you stor
 ## 📥 Download
 
 ### Windows
-1. Go to the [Releases](https://github.com/rodolfo-verde/password_manager/releases) page
+1. Go to the [Releases](../../releases) page
 2. Download the windows installer from the latest release
 3. Run the installer and follow the instructions
 
 ### Android
-1. Go to the [Releases](https://github.com/yourusername/password_manager/releases) page
+1. Go to the [Releases](../../releases) page
 2. Download the APK file from the latest release
 3. Open the APK on your Android device to install
 
