@@ -27,7 +27,9 @@ jobs:
       
     - name: Decode Keystore
       run: |
-        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/android/app/keystore.jks
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore.jks
+        # print the path to the keystore file
+        echo "Keystore file path: $(pwd)/keystore.jks"
 
     - name: Build APK
       run: flutter build apk --release
@@ -35,7 +37,7 @@ jobs:
         KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
         KEY_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
         ALIAS_NAME: ${{ secrets.KEY_ALIAS }}
-        KEY_PATH: android/app/keystore.jks
+        KEY_PATH: keystore.jks
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
