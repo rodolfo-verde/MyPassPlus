@@ -1,0 +1,157 @@
+name: Release Build
+
+on:
+  workflow_dispatch
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Cache Flutter SDK
+      uses: actions/cache@v3
+      with:
+        path: ~/.flutter
+        key: ${{ runner.os }}-flutter-${{ hashFiles('**/pubspec.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-flutter-
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.3'
+
+    - name: Cache Flutter dependencies
+      uses: actions/cache@v3
+      with:
+        path: build/.flutter
+        key: ${{ runner.os }}-flutter-deps-${{ hashFiles('**/pubspec.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-flutter-deps-
+
+    - name: Install dependencies
+      run: flutter pub get
+
+    - name: Generate localization files
+      run: dart run intl_utils:generate
+
+    - name: Build APK
+      run: flutter build apk --release
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release
+        path: build/app/outputs/flutter-apk/app-release.apk
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Cache Flutter SDK
+      uses: actions/cache@v3
+      with:
+        path: ~/.flutter
+        key: ${{ runner.os }}-flutter-${{ hashFiles('**/pubspec.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-flutter-
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.3'
+
+    - name: Cache Flutter dependencies
+      uses: actions/cache@v3
+      with:
+        path: build/.flutter
+        key: ${{ runner.os }}-flutter-deps-${{ hashFiles('**/pubspec.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-flutter-deps-
+
+    - name: Install dependencies
+      run: flutter pub get
+
+    - name: Generate localization files
+      run: dart run intl_utils:generate
+
+    - name: Cache Python packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install PyYAML
+      run: pip install pyyaml
+
+    - name: Update installer version
+      run: python update_iss_version.py
+
+    - name: Build Windows
+      run: flutter build windows --release
+
+    - name: Create installer
+      run: iscc installer.iss
+
+    - name: Upload Windows Installer
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-installer
+        path: MyPass+Installer.exe
+
+  create-release:
+    needs: [build-android, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Get version from pubspec.yaml
+        id: version
+        run: |
+          VERSION=$(grep 'version:' pubspec.yaml | awk '{print $2}' | tr -d "'")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Download APK
+        uses: actions/download-artifact@v4
+        with:
+          name: app-release
+          
+      - name: Download Windows Installer
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+
+      - name: Rename artifacts
+        run: |
+          mv app-release.apk mypass-${{ steps.version.outputs.version }}-android.apk
+          mv MyPass+Installer.exe mypass-${{ steps.version.outputs.version }}-windows.exe
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Version ${{ steps.version.outputs.version }}
+          body: |
+            Release version ${{ steps.version.outputs.version }}
+            Built on ${{ github.event.repository.updated_at }}
+            
+            ### Downloads
+            - Windows Installer: mypass-${{ steps.version.outputs.version }}-windows.exe
+            - Android APK: mypass-${{ steps.version.outputs.version }}-android.apk
+          files: |
+            mypass-${{ steps.version.outputs.version }}-android.apk
+            mypass-${{ steps.version.outputs.version }}-windows.exe
+          draft: false
+          prerelease: false
