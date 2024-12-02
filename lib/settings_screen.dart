@@ -32,7 +32,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _delimiter = ',';
   bool _includeHeader = true;
   String? _selectedDirectoryPath;
-  final bool _showDevButton = true; // Toggle this to show/hide the dev button
   String _selectedLanguage = 'en'; // Add this line
 
   @override
@@ -309,16 +308,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     MaterialPageRoute(builder: (_) => PasswordSettingsScreen()),
                   );
                 },
-              ),
-              Visibility(
-                visible: _showDevButton,
-                child: ListTile(
-                  title: Text(S.of(context).deleteAllData), // Localized string
-                  trailing: Icon(Icons.delete),
-                  onTap: () async {
-                    await _deleteAllData(passwordManager);
-                  },
-                ),
               ),
             ],
           ),
