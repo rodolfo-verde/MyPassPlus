@@ -118,5 +118,11 @@
   "submitButton": "Submit",
   "confirmPasswordLabel": "Confirm Password",
   "passwordsDoNotMatch": "Passwords do not match",
-  "enterPasswordToDisable": "Enter current password to disable"
+  "enterPasswordToDisable": "Enter current password to disable",
+  "checkForUpdates": "Check for Updates",
+  "failedToOpenUrl": "Could not open URL",
+  "waitingForSender": "Waiting for a sender...",
+  "searchingForReceivers": "Searching for receivers...",
+  "retry": "Retry",
+  "receiverSentMessage": "{name} sent data."
 }

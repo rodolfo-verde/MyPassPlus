@@ -8,6 +8,7 @@ import 'password_manager.dart';
 import 'ui_helper.dart';
 import 'password_entry.dart';
 import 'generated/l10n.dart'; // Import for localization
+import 'package:device_info_plus/device_info_plus.dart';
 
 class EncryptedPackage {
   final Uint8List encryptedData;
@@ -28,6 +29,13 @@ class EncryptedPackage {
   }
 }
 
+class Receiver {
+  final String name;
+  final String ip;
+
+  Receiver(this.name, this.ip);
+}
+
 class LocalConnectionScreen extends StatefulWidget {
   final bool isSender;
   const LocalConnectionScreen({super.key, required this.isSender});
@@ -38,17 +46,18 @@ class LocalConnectionScreen extends StatefulWidget {
 class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
   String _receiverIp = '';
   final String _encryptionKey = 'my32lengthsupersecretnooneknows1'; // 32 chars
-  final List<String> _availableReceivers = [];
+  final List<Receiver> _availableReceivers = [];
   ServerSocket? _serverSocket;
   RawDatagramSocket? _discoverySocket;
+  bool _isSearching = false;
+
   @override
   void initState() {
     super.initState();
     if (widget.isSender) {
-      print("I'm the sender");
+      setState(() => _isSearching = true);
       _discoverReceivers();
     } else {
-      print("I'm the receiver");
       _receiveData();
     }
   }
@@ -61,6 +70,9 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
   }
 
   Future<void> _discoverReceivers() async {
+    setState(() => _isSearching = true);
+    _availableReceivers.clear();
+
     // Get all network interfaces
     final interfaces = await NetworkInterface.list();
     final validInterfaces = interfaces.where((interface) => interface.addresses
@@ -77,19 +89,20 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
         socket.broadcastEnabled = true;
         _discoverySocket = socket;
 
-        print('Binding to interface: ${interface.name} (${addr.address})');
-
         socket.listen((RawSocketEvent event) {
           if (event == RawSocketEvent.read) {
             Datagram? datagram = socket.receive();
             if (datagram != null) {
               String message = String.fromCharCodes(datagram.data);
-              print(
-                  'Received message: $message from ${datagram.address.address}');
-              if (message == 'RECEIVER_HERE') {
+              if (message.startsWith('RECEIVER_HERE')) {
+                List<String> parts = message.split(':');
+                String receiverName =
+                    parts.length > 1 ? parts[1] : datagram.address.address;
                 setState(() {
-                  if (!_availableReceivers.contains(datagram.address.address)) {
-                    _availableReceivers.add(datagram.address.address);
+                  if (!_availableReceivers
+                      .any((r) => r.ip == datagram.address.address)) {
+                    _availableReceivers
+                        .add(Receiver(receiverName, datagram.address.address));
                   }
                 });
               }
@@ -97,20 +110,19 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
           }
         });
 
-        // Send broadcast on this interface
-        print('Sending discovery message on ${addr.address}');
-        socket.send(utf8.encode('DISCOVER_RECEIVERS'),
+        socket.send(utf8.encode('DISCOVER_RECEIVERS:${await _getDeviceName()}'),
             InternetAddress('255.255.255.255'), 4568);
       } catch (e) {
-        print('Error on interface ${interface.name}: $e');
+        // Handle error silently or through proper error handling
       }
     }
 
     // Wait longer for responses on PC
-    await Future.delayed(Duration(seconds: 5));
+    await Future.delayed(Duration(seconds: 3));
     if (!mounted) return; // Check if widget is still mounted
 
     _discoverySocket?.close();
+    setState(() => _isSearching = false);
 
     if (_availableReceivers.isEmpty) {
       if (mounted) {
@@ -128,18 +140,19 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
   void _showReceiverSelectionDialog() {
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text(S.of(context).selectReceiver), // Localized string
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            children: _availableReceivers.map((receiverIp) {
+            children: _availableReceivers.map((receiver) {
               return ListTile(
-                title: Text(receiverIp),
+                title: Text(receiver.name),
+                subtitle: Text(receiver.ip),
                 onTap: () {
                   setState(() {
-                    _receiverIp = receiverIp;
+                    _receiverIp = receiver.ip;
                   });
                   Navigator.of(context).pop();
                   _sendData();
@@ -168,7 +181,8 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
     final jsonData = jsonEncode(data);
     final encryptedPackage = _encryptData(jsonData);
     final socket = await Socket.connect(_receiverIp, 4567);
-    socket.add(utf8.encode(jsonEncode(encryptedPackage.toJson())));
+    socket.add(utf8.encode(
+        jsonEncode(encryptedPackage.toJson()) + ':${await _getDeviceName()}'));
     await socket.flush();
     await socket.close();
     if (mounted) {
@@ -205,14 +219,18 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
           isStarred: entry['isStarred'],
         );
       }).toList();
+      final senderName =
+          socket.remoteAddress.host; // Placeholder for actual sender name
+      // You may need to implement a way to receive sender's name
       bool? replace = await showDialog<bool>(
         context: context,
         barrierDismissible: true, // Allow dismissing by clicking outside
         builder: (BuildContext context) {
           return AlertDialog(
             title: Text(S.of(context).importOptions), // Localized string
-            content:
-                Text(S.of(context).replaceOrMergeEntries), // Localized string
+            content: Text(S
+                .of(context)
+                .receiverSentMessage(senderName)), // Changed this line
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -280,14 +298,48 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
     return encrypter.decrypt(encrypted, iv: iv);
   }
 
+  Future<String> _getDeviceName() async {
+    final deviceInfo = DeviceInfoPlugin();
+    try {
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        return androidInfo.model;
+      } else if (Platform.isWindows) {
+        final windowsInfo = await deviceInfo.windowsInfo;
+        return windowsInfo.computerName;
+      }
+    } catch (e) {
+      // Handle any errors
+    }
+    return "Unknown Device";
+  }
+
   @override
   Widget build(BuildContext context) {
+    String statusMessage = widget.isSender
+        ? S.of(context).searchingForReceivers
+        : S.of(context).waitingForSender;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(S.of(context).localConnection), // Localized string
+        title: Text(S.of(context).localConnection),
       ),
       body: Center(
-        child: Text(S.of(context).waitingForRoleSelection), // Localized string
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (widget.isSender && !_isSearching) ...[
+              ElevatedButton(
+                onPressed: _discoverReceivers,
+                child: Text(S.of(context).retry),
+              ),
+            ] else ...[
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text(statusMessage),
+            ],
+          ],
+        ),
       ),
     );
   }
