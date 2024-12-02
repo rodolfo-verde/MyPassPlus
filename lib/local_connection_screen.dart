@@ -73,19 +73,18 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
     setState(() => _isSearching = true);
     _availableReceivers.clear();
 
-    // Get all network interfaces
     final interfaces = await NetworkInterface.list();
     final validInterfaces = interfaces.where((interface) => interface.addresses
         .any((addr) => addr.type == InternetAddressType.IPv4));
 
     for (var interface in validInterfaces) {
-      if (!mounted) return; // Check if widget is still mounted
+      if (!mounted) return;
 
       try {
         final addr = interface.addresses
             .firstWhere((addr) => addr.type == InternetAddressType.IPv4);
 
-        final socket = await RawDatagramSocket.bind(addr, 0);
+        final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
         socket.broadcastEnabled = true;
         _discoverySocket = socket;
 
@@ -110,16 +109,18 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
           }
         });
 
-        socket.send(utf8.encode('DISCOVER_RECEIVERS:${await _getDeviceName()}'),
+        // Send discovery message with device name
+        final deviceName = await _getDeviceName();
+        final discoveryMessage = 'DISCOVER_RECEIVERS:$deviceName';
+        socket.send(utf8.encode(discoveryMessage),
             InternetAddress('255.255.255.255'), 4568);
       } catch (e) {
-        // Handle error silently or through proper error handling
+        // Silently handle errors
       }
     }
 
-    // Wait longer for responses on PC
-    await Future.delayed(Duration(seconds: 3));
-    if (!mounted) return; // Check if widget is still mounted
+    await Future.delayed(Duration(seconds: 5));
+    if (!mounted) return;
 
     _discoverySocket?.close();
     setState(() => _isSearching = false);
@@ -180,9 +181,12 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
     }).toList();
     final jsonData = jsonEncode(data);
     final encryptedPackage = _encryptData(jsonData);
+    final transferPackage = {
+      'data': jsonEncode(encryptedPackage.toJson()),
+      'deviceName': await _getDeviceName()
+    };
     final socket = await Socket.connect(_receiverIp, 4567);
-    socket.add(utf8.encode(
-        '${jsonEncode(encryptedPackage.toJson())}:${await _getDeviceName()}'));
+    socket.add(utf8.encode(jsonEncode(transferPackage)));
     await socket.flush();
     await socket.close();
     if (mounted) {
@@ -192,94 +196,101 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
   }
 
   Future<void> _receiveData() async {
-    if (!mounted) return; // Check if widget is still mounted
+    if (!mounted) return;
 
-    final server =
-        await ServerSocket.bind(InternetAddress.anyIPv4, 4567, shared: true);
-    _serverSocket = server;
-    server.listen((Socket socket) async {
-      if (!mounted) {
-        socket.close();
-        return;
-      }
-
-      final receivedData = await socket.fold<Uint8List>(
-          Uint8List(0), (buffer, data) => Uint8List.fromList(buffer + data));
-      final packageJson = jsonDecode(utf8.decode(receivedData));
-      final encryptedPackage = EncryptedPackage.fromJson(packageJson);
-      final jsonData = _decryptData(encryptedPackage);
-      final data = jsonDecode(jsonData) as List<dynamic>;
-      final passwordManager =
-          Provider.of<PasswordManager>(context, listen: false);
-      final newEntries = data.map((entry) {
-        return PasswordEntry(
-          key: entry['key'],
-          user: entry['user'],
-          password: entry['password'],
-          isStarred: entry['isStarred'],
-        );
-      }).toList();
-      final senderName =
-          socket.remoteAddress.host; // Placeholder for actual sender name
-      // You may need to implement a way to receive sender's name
-      bool? replace = await showDialog<bool>(
-        context: context,
-        barrierDismissible: true, // Allow dismissing by clicking outside
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text(S.of(context).importOptions), // Localized string
-            content: Text(S
-                .of(context)
-                .receiverSentMessage(senderName)), // Changed this line
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text(S.of(context).merge), // Localized string
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: Text(S.of(context).replace), // Localized string
-              ),
-            ],
-          );
-        },
-      );
-
-      if (!mounted) return; // Check if widget is still mounted
-
-      if (replace == null) {
-        if (mounted) {
-          UIHelper.showSnackBar(S.of(context).importCancelled);
+    try {
+      final server =
+          await ServerSocket.bind(InternetAddress.anyIPv4, 4567, shared: true);
+      _serverSocket = server;
+      server.listen((Socket socket) async {
+        if (!mounted) {
+          socket.close();
+          return;
         }
-        return;
-      }
-      if (replace == true) {
-        await passwordManager.replaceEntries(newEntries);
-        UIHelper.showSnackBar(
-            S.of(context).entriesReplacedSuccessfully); // Localized string
-      } else {
-        await passwordManager.mergeEntries(newEntries);
-        UIHelper.showSnackBar(
-            S.of(context).entriesAddedSuccessfully); // Localized string
-      }
-      await socket.close();
-    });
-    // Respond to discovery messages
-    final RawDatagramSocket discoverySocket =
-        await RawDatagramSocket.bind(InternetAddress.anyIPv4, 4568);
-    _discoverySocket = discoverySocket;
-    discoverySocket.listen((RawSocketEvent event) {
-      if (event == RawSocketEvent.read) {
-        Datagram? datagram = discoverySocket.receive();
-        if (datagram != null) {
-          String message = String.fromCharCodes(datagram.data);
-          if (message == 'DISCOVER_RECEIVERS') {
-            discoverySocket.send(
-                utf8.encode('RECEIVER_HERE'), datagram.address, datagram.port);
+
+        final receivedData = await socket.fold<Uint8List>(
+            Uint8List(0), (buffer, data) => Uint8List.fromList(buffer + data));
+        final transferPackage = jsonDecode(utf8.decode(receivedData));
+        final packageJson = jsonDecode(transferPackage['data']);
+        final senderName = transferPackage['deviceName'];
+        final encryptedPackage = EncryptedPackage.fromJson(packageJson);
+        final jsonData = _decryptData(encryptedPackage);
+        final data = jsonDecode(jsonData) as List<dynamic>;
+        final passwordManager =
+            Provider.of<PasswordManager>(context, listen: false);
+        final newEntries = data.map((entry) {
+          return PasswordEntry(
+            key: entry['key'],
+            user: entry['user'],
+            password: entry['password'],
+            isStarred: entry['isStarred'],
+          );
+        }).toList();
+        // You may need to implement a way to receive sender's name
+        bool? replace = await showDialog<bool>(
+          context: context,
+          barrierDismissible: true, // Allow dismissing by clicking outside
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text(S.of(context).importOptions), // Localized string
+              content: Text(S
+                  .of(context)
+                  .receiverSentMessage(senderName)), // Changed this line
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text(S.of(context).merge), // Localized string
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: Text(S.of(context).replace), // Localized string
+                ),
+              ],
+            );
+          },
+        );
+
+        if (!mounted) return; // Check if widget is still mounted
+
+        if (replace == null) {
+          if (mounted) {
+            UIHelper.showSnackBar(S.of(context).importCancelled);
+          }
+          return;
+        }
+        if (replace == true) {
+          await passwordManager.replaceEntries(newEntries);
+          UIHelper.showSnackBar(
+              S.of(context).entriesReplacedSuccessfully); // Localized string
+        } else {
+          await passwordManager.mergeEntries(newEntries);
+          UIHelper.showSnackBar(
+              S.of(context).entriesAddedSuccessfully); // Localized string
+        }
+        await socket.close();
+      });
+
+      // Discovery response setup
+      final discoverySocket =
+          await RawDatagramSocket.bind(InternetAddress.anyIPv4, 4568);
+      _discoverySocket = discoverySocket;
+      discoverySocket.listen((RawSocketEvent event) async {
+        if (event == RawSocketEvent.read) {
+          Datagram? datagram = discoverySocket.receive();
+          if (datagram != null) {
+            String message = String.fromCharCodes(datagram.data);
+            if (message.startsWith('DISCOVER_RECEIVERS')) {
+              final deviceName = await _getDeviceName();
+              final response = 'RECEIVER_HERE:$deviceName';
+              discoverySocket.send(
+                  utf8.encode(response), datagram.address, datagram.port);
+            }
           }
         }
-      }
-    });
+      });
+    } catch (e) {
+      // Silently handle errors
+    }
   }
 
   EncryptedPackage _encryptData(String data) {
