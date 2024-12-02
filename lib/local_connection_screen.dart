@@ -182,7 +182,7 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
     final encryptedPackage = _encryptData(jsonData);
     final socket = await Socket.connect(_receiverIp, 4567);
     socket.add(utf8.encode(
-        jsonEncode(encryptedPackage.toJson()) + ':${await _getDeviceName()}'));
+        '${jsonEncode(encryptedPackage.toJson())}:${await _getDeviceName()}'));
     await socket.flush();
     await socket.close();
     if (mounted) {
