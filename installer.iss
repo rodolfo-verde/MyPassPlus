@@ -10,7 +10,7 @@ OutputDir=.
 OutputBaseFilename=MyPass+Installer
 Compression=lzma
 SolidCompression=yes
-UninstallDisplayIcon={app}\password_manager.exe
+UninstallDisplayIcon={app}\MyPass+.exe
 AppId={{80133055-5abf-4cf4-a5ff-0ddd2330d4de}
 
 [Languages]
@@ -24,12 +24,12 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\MyPass+"; Filename: "{app}\password_manager.exe"
+Name: "{group}\MyPass+"; Filename: "{app}\MyPass+.exe"
 Name: "{group}\Uninstall MyPass+"; Filename: "{uninstallexe}"
-Name: "{commondesktop}\MyPass+"; Filename: "{app}\password_manager.exe"; Tasks: desktopicon
+Name: "{commondesktop}\MyPass+"; Filename: "{app}\MyPass+.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\password_manager.exe"; Description: "{cm:LaunchProgram,MyPass+}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\MyPass+.exe"; Description: "{cm:LaunchProgram,MyPass+}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{userappdata}\MyPass+"
