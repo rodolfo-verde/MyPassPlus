@@ -15,6 +15,7 @@ import 'password_entry.dart';
 import 'password_settings_screen.dart'; // Import PasswordSettingsScreen
 import 'local_connection_screen.dart'; // Import LocalConnectionScreen
 import 'generated/l10n.dart'; // Import localization
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -32,13 +33,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _delimiter = ',';
   bool _includeHeader = true;
   String? _selectedDirectoryPath;
-  String _selectedLanguage = 'en'; // Add this line
+  String _selectedLanguage = 'en';
+
+  static const String githubReleasesUrl =
+      'https://github.com/rodolfo-verde/MyPassPlus/releases';
 
   @override
   void initState() {
     super.initState();
     _loadPreferences();
-    _loadLanguagePreference(); // Add this line
+    _loadLanguagePreference();
   }
 
   Future<void> _loadPreferences() async {
@@ -160,6 +164,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           builder: (_) => LocalConnectionScreen(isSender: isSender),
         ),
       );
+    }
+  }
+
+  Future<void> _openGitHubReleases() async {
+    final Uri url = Uri.parse(githubReleasesUrl);
+    if (!await launchUrl(url)) {
+      UIHelper.showSnackBar(S.current.failedToOpenUrl);
     }
   }
 
@@ -299,6 +310,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     }
                   },
                 ),
+              ListTile(
+                title: Text(S.of(context).checkForUpdates),
+                trailing: Icon(Icons.system_update),
+                onTap: _openGitHubReleases,
+              ),
               ListTile(
                 title: Text(S.of(context).passwordSettings), // Localized string
                 trailing: Icon(Icons.lock),
