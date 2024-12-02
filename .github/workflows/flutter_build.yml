@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   build-android:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout repository
@@ -60,7 +60,7 @@ jobs:
     - name: Cache Flutter SDK
       uses: actions/cache@v3
       with:
-        path: ~/.flutter
+        path: C:\flutter
         key: ${{ runner.os }}-flutter-${{ hashFiles('**/pubspec.yaml') }}
         restore-keys: |
           ${{ runner.os }}-flutter-
@@ -112,7 +112,7 @@ jobs:
 
   create-release:
     needs: [build-android, build-windows]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
