@@ -21,12 +21,12 @@ Un administrador de contraseñas simple y seguro para Windows y Android que te a
 ## 📥 Descargar
 
 ### Windows
-1. Ve a la página de [Lanzamientos](../../releases)
+1. Ve a la página de [Lanzamientos](../../../releases)
 2. Descarga el instalador de Windows de la versión más reciente
 3. Ejecuta el instalador y sigue las instrucciones
 
 ### Android
-1. Ve a la página de [Lanzamientos](../../releases)
+1. Ve a la página de [Lanzamientos](../../../releases)
 2. Descarga el archivo APK de la versión más reciente
 3. Abre el APK en tu dispositivo Android para instalar
 
