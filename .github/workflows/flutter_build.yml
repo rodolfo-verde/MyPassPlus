@@ -27,9 +27,9 @@ jobs:
       
     - name: Decode Keystore
       run: |
-        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore.jks
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/keystore.jks
         # print the path to the keystore file
-        echo "Keystore file path: $(pwd)/keystore.jks"
+        echo "Keystore file path: $(pwd)/android/app/keystore.jks"
 
     - name: Build APK
       run: flutter build apk --release
