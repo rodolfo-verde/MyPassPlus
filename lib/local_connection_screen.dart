@@ -9,6 +9,7 @@ import 'ui_helper.dart';
 import 'password_entry.dart';
 import 'generated/l10n.dart'; // Import for localization
 import 'package:device_info_plus/device_info_plus.dart';
+import 'password_list_screen.dart'; // Add this import
 
 class EncryptedPackage {
   final Uint8List encryptedData;
@@ -73,50 +74,41 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
     setState(() => _isSearching = true);
     _availableReceivers.clear();
 
-    final interfaces = await NetworkInterface.list();
-    final validInterfaces = interfaces.where((interface) => interface.addresses
-        .any((addr) => addr.type == InternetAddressType.IPv4));
+    if (!mounted) return;
 
-    for (var interface in validInterfaces) {
-      if (!mounted) return;
+    try {
+      final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+      socket.broadcastEnabled = true;
+      _discoverySocket = socket;
 
-      try {
-        final addr = interface.addresses
-            .firstWhere((addr) => addr.type == InternetAddressType.IPv4);
-
-        final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
-        socket.broadcastEnabled = true;
-        _discoverySocket = socket;
-
-        socket.listen((RawSocketEvent event) {
-          if (event == RawSocketEvent.read) {
-            Datagram? datagram = socket.receive();
-            if (datagram != null) {
-              String message = String.fromCharCodes(datagram.data);
-              if (message.startsWith('RECEIVER_HERE')) {
-                List<String> parts = message.split(':');
-                String receiverName =
-                    parts.length > 1 ? parts[1] : datagram.address.address;
-                setState(() {
-                  if (!_availableReceivers
-                      .any((r) => r.ip == datagram.address.address)) {
-                    _availableReceivers
-                        .add(Receiver(receiverName, datagram.address.address));
-                  }
-                });
-              }
+      socket.listen((RawSocketEvent event) {
+        if (event == RawSocketEvent.read) {
+          Datagram? datagram = socket.receive();
+          if (datagram != null) {
+            String message = String.fromCharCodes(datagram.data);
+            if (message.startsWith('RECEIVER_HERE')) {
+              List<String> parts = message.split(':');
+              String receiverName =
+                  parts.length > 1 ? parts[1] : datagram.address.address;
+              setState(() {
+                if (!_availableReceivers
+                    .any((r) => r.ip == datagram.address.address)) {
+                  _availableReceivers
+                      .add(Receiver(receiverName, datagram.address.address));
+                }
+              });
             }
           }
-        });
+        }
+      });
 
-        // Send discovery message with device name
-        final deviceName = await _getDeviceName();
-        final discoveryMessage = 'DISCOVER_RECEIVERS:$deviceName';
-        socket.send(utf8.encode(discoveryMessage),
-            InternetAddress('255.255.255.255'), 4568);
-      } catch (e) {
-        // Silently handle errors
-      }
+      // Send discovery message with device name
+      final deviceName = await _getDeviceName();
+      final discoveryMessage = 'DISCOVER_RECEIVERS:$deviceName';
+      socket.send(utf8.encode(discoveryMessage),
+          InternetAddress('255.255.255.255'), 4568);
+    } catch (e) {
+      // Silently handle errors
     }
 
     await Future.delayed(Duration(seconds: 5));
@@ -260,12 +252,18 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
         }
         if (replace == true) {
           await passwordManager.replaceEntries(newEntries);
-          UIHelper.showSnackBar(
-              S.of(context).entriesReplacedSuccessfully); // Localized string
+          UIHelper.showSnackBar(S.of(context).entriesReplacedSuccessfully);
+          Navigator.popUntil(
+              context,
+              (route) =>
+                  route.settings.name == 'PasswordListScreen' || route.isFirst);
         } else {
           await passwordManager.mergeEntries(newEntries);
-          UIHelper.showSnackBar(
-              S.of(context).entriesAddedSuccessfully); // Localized string
+          UIHelper.showSnackBar(S.of(context).entriesAddedSuccessfully);
+          Navigator.popUntil(
+              context,
+              (route) =>
+                  route.settings.name == 'PasswordListScreen' || route.isFirst);
         }
         await socket.close();
       });
