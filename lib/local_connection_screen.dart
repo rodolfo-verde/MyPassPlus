@@ -9,7 +9,6 @@ import 'ui_helper.dart';
 import 'password_entry.dart';
 import 'generated/l10n.dart'; // Import for localization
 import 'package:device_info_plus/device_info_plus.dart';
-import 'password_list_screen.dart'; // Add this import
 
 class EncryptedPackage {
   final Uint8List encryptedData;
