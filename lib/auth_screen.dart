@@ -43,6 +43,7 @@ class _AuthScreenState extends State<AuthScreen> {
       _authenticate();
     } else {
       setState(() {
+        _showPasswordLogin = true;
         _isLoading = false;
       });
     }
@@ -66,25 +67,20 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _authenticate() async {
-    try {
-      bool authenticated = await _localAuth.authenticate(
-        localizedReason: S.of(context).biometricPrompt,
-        options: const AuthenticationOptions(
-          useErrorDialogs: true,
-          stickyAuth: true,
-          biometricOnly: true,
-        ),
-      );
-      if (authenticated) {
-        Navigator.pushReplacementNamed(context, '/home');
-      } else {
-        setState(() {
-          _showPasswordLogin = true;
-        });
-      }
-    } catch (e) {
+    bool authenticated = await _localAuth.authenticate(
+      localizedReason: S.of(context).biometricPrompt,
+      options: const AuthenticationOptions(
+        useErrorDialogs: true,
+        stickyAuth: true,
+        biometricOnly: true,
+      ),
+    );
+    if (authenticated) {
+      Navigator.pushReplacementNamed(context, '/home');
+    } else {
       setState(() {
         _showPasswordLogin = true;
+        _isLoading = false;
       });
     }
   }
