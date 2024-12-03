@@ -41,9 +41,52 @@ Root: HKLM; Subkey: "Software\MyPassPlus"; ValueType: string; ValueName: "Versio
 const
   MyAppVersion = '0.0.3';
 
-function CompareVersions(InstalledVersion, CurrentVersion: string): Integer;
+function CompareVersions(Ver1, Ver2: string): Integer;
+var
+  Pos1, Pos2, Len1, Len2, Num1, Num2: Integer;
+  Part1, Part2: string;
 begin
-  Result := CompareText(InstalledVersion, CurrentVersion);
+  Pos1 := 1;
+  Pos2 := 1;
+  Len1 := Length(Ver1);
+  Len2 := Length(Ver2);
+  
+  // Compare each version part
+  while (Pos1 <= Len1) or (Pos2 <= Len2) do
+  begin
+    // Get next version part from Ver1
+    Part1 := '';
+    while (Pos1 <= Len1) and (Ver1[Pos1] <> '.') do
+    begin
+      Part1 := Part1 + Ver1[Pos1];
+      Inc(Pos1);
+    end;
+    Inc(Pos1); // skip dot
+    
+    // Get next version part from Ver2
+    Part2 := '';
+    while (Pos2 <= Len2) and (Ver2[Pos2] <> '.') do
+    begin
+      Part2 := Part2 + Ver2[Pos2];
+      Inc(Pos2);
+    end;
+    Inc(Pos2); // skip dot
+    
+    // Convert to numbers and compare
+    Num1 := StrToIntDef(Part1, 0);
+    Num2 := StrToIntDef(Part2, 0);
+    
+    if Num1 < Num2 then
+      Result := -1
+    else if Num1 > Num2 then
+      Result := 1
+    else
+      Continue;
+      
+    Exit;
+  end;
+  
+  Result := 0;
 end;
 
 function InitializeSetup(): Boolean;
