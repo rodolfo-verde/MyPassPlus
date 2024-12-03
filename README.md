@@ -6,16 +6,16 @@ A simple and secure password manager for Windows and Android that helps you stor
 
 ## Table of Contents
 1. [Download](#-download)
-2. [Quick Start Guide](#-quick-start-guide)
-3. [Security Features](#-security-features)
-4. [Features](#features)
+2. [Features](#features)
+   - [Security](#security)
    - [Adding Passwords](#adding-passwords)
+   - [Managing Usernames](#managing-usernames)
    - [Finding & Using Passwords](#finding--using-passwords)
    - [Data Backup & Transfer](#data-backup--transfer)
-5. [Tips](#-tips)
-6. [Language Support](#-language-support)
-7. [Privacy](#-privacy)
-8. [License](#license)
+3. [Tips](#-tips)
+4. [Language Support](#-language-support)
+5. [Privacy](#-privacy)
+6. [License](#license)
 
 ## 📥 Download
 
@@ -29,7 +29,14 @@ A simple and secure password manager for Windows and Android that helps you stor
 2. Download the APK file from the latest release
 3. Open the APK on your Android device to install
 
-## Features
+## ⭐ Features
+
+### Security
+- All passwords are encrypted
+- Optional master password protection
+- Fingerprint login on Android
+- Auto-lock when minimized
+- No internet connection required
 
 ### Adding Passwords
 1. Click the `+` button in the top-right
@@ -55,14 +62,6 @@ A simple and secure password manager for Windows and Android that helps you stor
 - Import data using Settings → Import Data
 - Transfer passwords between devices using Settings → Local Connection (Work in Progress)
 
-## 🔒 Security Features
-
-- All passwords are encrypted
-- Optional master password protection
-- Fingerprint login on Android
-- Auto-lock when minimized
-- No internet connection required
-
 ## 💡 Tips
 
 - Use the "Generate Random Password" feature for strong passwords
@@ -86,6 +85,6 @@ To change the language:
 
 MyPass+ is completely offline and stores all data locally on your device. We never collect or transmit your passwords.
 
-## License
+## ⚖️ License
 
 This project is open source and licensed under the MIT License.

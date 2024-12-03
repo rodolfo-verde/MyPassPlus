@@ -6,17 +6,16 @@ Un administrador de contraseñas simple y seguro para Windows y Android que te a
 
 ## Tabla de Contenidos
 1. [Descargar](#-descargar)
-2. [Guía de Inicio Rápido](#-guía-de-inicio-rápido)
-3. [Características de Seguridad](#-características-de-seguridad)
-4. [Funcionalidades](#funcionalidades)
+2. [Funcionalidades](#funcionalidades)
+   - [Seguridad](#seguridad)
    - [Agregar Contraseñas](#agregar-contraseñas)
    - [Gestionar Nombres de Usuario](#gestionar-nombres-de-usuario)
    - [Buscar y Usar Contraseñas](#buscar-y-usar-contraseñas)
    - [Respaldo y Transferencia de Datos](#respaldo-y-transferencia-de-datos)
-5. [Consejos](#-consejos)
-6. [Soporte de Idiomas](#-soporte-de-idiomas)
-7. [Privacidad](#-privacidad)
-8. [Licencia](#licencia)
+3. [Consejos](#-consejos)
+4. [Soporte de Idiomas](#-soporte-de-idiomas)
+5. [Privacidad](#-privacidad)
+6. [Licencia](#licencia)
 
 ## 📥 Descargar
 
@@ -30,7 +29,14 @@ Un administrador de contraseñas simple y seguro para Windows y Android que te a
 2. Descarga el archivo APK de la versión más reciente
 3. Abre el APK en tu dispositivo Android para instalar
 
-## Funcionalidades
+## ⭐ Funcionalidades
+
+### Seguridad
+- Todas las contraseñas están encriptadas
+- Protección opcional con contraseña maestra
+- Inicio de sesión con huella digital en Android
+- Bloqueo automático al minimizar
+- No requiere conexión a internet
 
 ### Agregar Contraseñas
 1. Haz clic en el botón `+` en la esquina superior derecha
@@ -56,14 +62,6 @@ Un administrador de contraseñas simple y seguro para Windows y Android que te a
 - Importa datos usando Configuración → Importar Datos
 - Transfiere contraseñas entre dispositivos usando Configuración → Conexión Local (En Desarrollo)
 
-## 🔒 Características de Seguridad
-
-- Todas las contraseñas están encriptadas
-- Protección opcional con contraseña maestra
-- Inicio de sesión con huella digital en Android
-- Bloqueo automático al minimizar
-- No requiere conexión a internet
-
 ## 💡 Consejos
 
 - Usa la función "Generar Contraseña Aleatoria" para contraseñas seguras
@@ -87,6 +85,6 @@ Para cambiar el idioma:
 
 MyPass+ es completamente offline y almacena todos los datos localmente en tu dispositivo. Nunca recopilamos ni transmitimos tus contraseñas.
 
-## Licencia
+## ⚖️ Licencia
 
 Este proyecto es de código abierto y está bajo la Licencia MIT.
