@@ -45,7 +45,8 @@ class LocalConnectionScreen extends StatefulWidget {
 
 class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
   String _receiverIp = '';
-  final String _encryptionKey = 'my32lengthsupersecretnooneknows1'; // 32 chars
+  final _encryptionKey = const String.fromEnvironment('ENCRYPTION_KEY',
+      defaultValue: 'your_32_characters_long_key_here');
   final List<Receiver> _availableReceivers = [];
   ServerSocket? _serverSocket;
   RawDatagramSocket? _discoverySocket;
