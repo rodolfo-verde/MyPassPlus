@@ -32,7 +32,7 @@ jobs:
         echo "Keystore file path: $(pwd)/android/app/keystore.jks"
 
     - name: Build APK
-      run: flutter build apk --release
+      run: flutter build apk --release --dart-define=ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
       env:
         KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
         KEY_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
@@ -70,7 +70,7 @@ jobs:
       run: python update_iss_version.py
 
     - name: Build Windows
-      run: flutter build windows --release
+      run: flutter build windows --release --dart-define=ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
 
     - name: Create installer
       run: iscc installer.iss
