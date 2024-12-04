@@ -144,3 +144,6 @@ app.*.symbols
 
 # Generated files in the lib folder
 lib/generated/
+
+# Encryption key
+encryption_key.txt
