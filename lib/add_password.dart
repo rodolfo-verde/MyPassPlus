@@ -80,6 +80,8 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
               controller: _keyController,
               decoration: InputDecoration(labelText: S.of(context).keyLabel),
               enabled: widget.entry == null, // Disable key field if editing
+              autocorrect: false,
+              enableSuggestions: false,
             ),
             DropdownButtonFormField<String>(
               value: _selectedUsername,
@@ -109,12 +111,16 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
                 controller: _userController,
                 decoration:
                     InputDecoration(labelText: S.of(context).usernameLabel),
+                autocorrect: false,
+                enableSuggestions: false,
               ),
             TextField(
               controller: _passwordController,
               decoration:
                   InputDecoration(labelText: S.of(context).passwordLabel),
               obscureText: false, // Password field is not obscured
+              autocorrect: false,
+              enableSuggestions: false,
             ),
             SizedBox(height: 10), // Add separation
             ElevatedButton(
@@ -196,6 +202,8 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
                         ],
                       ),
                     ),
+                    autocorrect: false,
+                    enableSuggestions: false,
                   ),
                   SizedBox(height: 20),
                   Text(

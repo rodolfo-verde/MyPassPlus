@@ -88,6 +88,8 @@ class _PasswordListScreenState extends State<PasswordListScreen> {
             child: TextField(
               controller: _searchController,
               autofocus: Platform.isWindows, // Autofocus on Windows
+              autocorrect: false, // Disable autocorrect
+              enableSuggestions: false, // Disable suggestions
               decoration: InputDecoration(
                 labelText: S.of(context).searchLabel,
                 prefixIcon: Icon(Icons.search),

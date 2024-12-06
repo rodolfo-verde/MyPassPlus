@@ -41,6 +41,8 @@ class ManageUsernamesScreen extends StatelessWidget {
                                     .of(context)
                                     .usernameLabel), // Localized string
                             autofocus: true,
+                            autocorrect: false,
+                            enableSuggestions: false,
                             onSubmitted: (value) {
                               usernameManager.editUsername(username, value);
                               Navigator.of(context).pop();
@@ -125,6 +127,8 @@ class ManageUsernamesScreen extends StatelessWidget {
                       labelText:
                           S.of(context).usernameLabel), // Localized string
                   autofocus: true,
+                  autocorrect: false,
+                  enableSuggestions: false,
                   onSubmitted: (value) {
                     usernameManager.addUsername(value);
                     Navigator.of(context).pop();
