@@ -77,9 +77,14 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
     if (!mounted) return;
 
     try {
-      final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+      // Changed from port 0 to fixed port 4568
+      final socket =
+          await RawDatagramSocket.bind(InternetAddress.anyIPv4, 4568);
       socket.broadcastEnabled = true;
       _discoverySocket = socket;
+
+      print(
+          'Discovery socket bound to ${socket.address.address}:${socket.port}');
 
       socket.listen((RawSocketEvent event) {
         if (event == RawSocketEvent.read) {
@@ -108,7 +113,10 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
       socket.send(utf8.encode(discoveryMessage),
           InternetAddress('255.255.255.255'), 4568);
     } catch (e) {
-      // Silently handle errors
+      print('Error in discovery: $e');
+      if (mounted) {
+        UIHelper.showSnackBar('Error discovering receivers: $e');
+      }
     }
 
     await Future.delayed(Duration(seconds: 5));
@@ -161,29 +169,39 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
   Future<void> _sendData() async {
     if (!mounted) return; // Check if widget is still mounted
 
-    final passwordManager =
-        Provider.of<PasswordManager>(context, listen: false);
-    final data = passwordManager.entries.map((entry) {
-      return {
-        'key': entry.key,
-        'user': entry.user,
-        'password': entry.password,
-        'isStarred': entry.isStarred,
+    try {
+      final passwordManager =
+          Provider.of<PasswordManager>(context, listen: false);
+      final data = passwordManager.entries.map((entry) {
+        return {
+          'key': entry.key,
+          'user': entry.user,
+          'password': entry.password,
+          'isStarred': entry.isStarred,
+        };
+      }).toList();
+      final jsonData = jsonEncode(data);
+      final encryptedPackage = _encryptData(jsonData);
+      final transferPackage = {
+        'data': jsonEncode(encryptedPackage.toJson()),
+        'deviceName': await _getDeviceName()
       };
-    }).toList();
-    final jsonData = jsonEncode(data);
-    final encryptedPackage = _encryptData(jsonData);
-    final transferPackage = {
-      'data': jsonEncode(encryptedPackage.toJson()),
-      'deviceName': await _getDeviceName()
-    };
-    final socket = await Socket.connect(_receiverIp, 4567);
-    socket.add(utf8.encode(jsonEncode(transferPackage)));
-    await socket.flush();
-    await socket.close();
-    if (mounted) {
-      // Check before showing snackbar
-      UIHelper.showSnackBar(S.of(context).dataSentSuccessfully);
+      print('Connecting to $_receiverIp:4567');
+      final socket = await Socket.connect(_receiverIp, 4567);
+      print('Connected, sending data...');
+      socket.add(utf8.encode(jsonEncode(transferPackage)));
+      await socket.flush();
+      await socket.close();
+      print('Data sent successfully');
+      if (mounted) {
+        // Check before showing snackbar
+        UIHelper.showSnackBar(S.of(context).dataSentSuccessfully);
+      }
+    } catch (e) {
+      print('Error sending data: $e');
+      if (mounted) {
+        UIHelper.showSnackBar('Error sending data: $e');
+      }
     }
   }
 
@@ -191,9 +209,15 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
     if (!mounted) return;
 
     try {
-      final server =
-          await ServerSocket.bind(InternetAddress.anyIPv4, 4567, shared: true);
+      // Changed binding configuration
+      final server = await ServerSocket.bind(
+        InternetAddress.anyIPv4,
+        4567,
+        shared: true,
+      );
       _serverSocket = server;
+      print('Server listening on ${server.address.address}:${server.port}');
+
       server.listen((Socket socket) async {
         if (!mounted) {
           socket.close();
@@ -268,10 +292,17 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
         await socket.close();
       });
 
-      // Discovery response setup
-      final discoverySocket =
-          await RawDatagramSocket.bind(InternetAddress.anyIPv4, 4568);
+      // Changed discovery socket binding
+      final discoverySocket = await RawDatagramSocket.bind(
+        InternetAddress.anyIPv4,
+        4568,
+        reuseAddress: true, // Added this option
+      );
+      discoverySocket.broadcastEnabled = true; // Added this line
       _discoverySocket = discoverySocket;
+      print(
+          'Discovery socket bound to ${discoverySocket.address.address}:${discoverySocket.port}');
+
       discoverySocket.listen((RawSocketEvent event) async {
         if (event == RawSocketEvent.read) {
           Datagram? datagram = discoverySocket.receive();
@@ -287,7 +318,10 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
         }
       });
     } catch (e) {
-      // Silently handle errors
+      print('Error in receive setup: $e');
+      if (mounted) {
+        UIHelper.showSnackBar('Error setting up receiver: $e');
+      }
     }
   }
 
