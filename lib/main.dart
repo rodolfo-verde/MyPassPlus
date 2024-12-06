@@ -12,12 +12,19 @@ import 'theme_notifier.dart';
 import 'dart:io';
 import 'dart:ui';
 import 'password_list_screen.dart';
+import 'dart:async';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+Timer? _inactivityTimer;
+final int logoutDelay = 180;
+final _storage = FlutterSecureStorage();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  WidgetsBinding.instance.addObserver(LifecycleEventHandler());
   final prefs = await SharedPreferences.getInstance();
   final stayOnTop = prefs.getBool('stayOnTop') ?? false;
   final alignment = prefs.getString('alignment') ?? 'None';
@@ -80,6 +87,7 @@ class MyApp extends StatelessWidget {
       child: Consumer<ThemeNotifier>(
         builder: (context, themeNotifier, child) {
           return MaterialApp(
+            navigatorKey: navigatorKey,
             scaffoldMessengerKey: scaffoldMessengerKey,
             title: 'Password Manager',
             theme:
@@ -101,5 +109,46 @@ class MyApp extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+class LifecycleEventHandler extends WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (Platform.isAndroid) {
+      switch (state) {
+        case AppLifecycleState.paused:
+          _checkPasswordAndStartTimer();
+          break;
+        case AppLifecycleState.resumed:
+          _cancelLogoutTimer();
+          break;
+        default:
+          break;
+      }
+    }
+  }
+}
+
+// Timer management functions
+Future<void> _checkPasswordAndStartTimer() async {
+  String? passwordEnabled = await _storage.read(key: 'password_enabled');
+  if (passwordEnabled == 'true') {
+    _startLogoutTimer();
+  }
+}
+
+void _startLogoutTimer() {
+  _cancelLogoutTimer();
+  _inactivityTimer = Timer(Duration(seconds: logoutDelay), () {
+    if (navigatorKey.currentState != null) {
+      navigatorKey.currentState!.pushReplacementNamed('/');
+    }
+  });
+}
+
+void _cancelLogoutTimer() {
+  if (_inactivityTimer != null && _inactivityTimer!.isActive) {
+    _inactivityTimer!.cancel();
   }
 }
