@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart'; // Added import
 import 'username_manager.dart';
 import 'password_manager.dart';
 import 'password_entry.dart';
@@ -116,8 +117,16 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
               ),
             TextField(
               controller: _passwordController,
-              decoration:
-                  InputDecoration(labelText: S.of(context).passwordLabel),
+              decoration: InputDecoration(
+                labelText: S.of(context).passwordLabel,
+                suffixIcon: IconButton(
+                  icon: Icon(Icons.copy),
+                  tooltip: S
+                      .of(context)
+                      .copyPasswordTooltip, // Ensure this key exists in localization
+                  onPressed: _copyPassword,
+                ),
+              ),
               obscureText: false, // Password field is not obscured
               autocorrect: false,
               enableSuggestions: false,
@@ -314,5 +323,18 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
       text: _keyController.text.toUpperCase(),
       selection: _keyController.selection,
     );
+  }
+
+  void _copyPassword() {
+    final password = _passwordController.text;
+    if (password.isNotEmpty) {
+      Clipboard.setData(ClipboardData(text: password));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(S
+                .of(context)
+                .passwordCopiedMessage)), // Ensure this key exists in localization
+      );
+    }
   }
 }
