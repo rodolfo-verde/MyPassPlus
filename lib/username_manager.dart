@@ -25,6 +25,10 @@ class UsernameManager extends ChangeNotifier {
   }
 
   void addUsername(String username) {
+    // Check if the username is already in the list and dont add it again
+    if (_usernames.contains(username)) {
+      return;
+    }
     _usernames.add(username);
     _saveUsernames();
     notifyListeners();
