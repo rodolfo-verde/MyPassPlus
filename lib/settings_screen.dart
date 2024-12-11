@@ -7,7 +7,6 @@ import 'package:window_manager/window_manager.dart';
 import 'package:downloadsfolder/downloadsfolder.dart';
 import 'dart:io';
 import 'package:csv/csv.dart';
-import 'manage_usernames.dart';
 import 'theme_notifier.dart';
 import 'password_manager.dart';
 import 'ui_helper.dart'; // Import UIHelper
@@ -37,8 +36,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _selectedLanguage = 'en';
   PackageInfo? _packageInfo;
 
-  static const String githubReleasesUrl =
-      'https://github.com/rodolfo-verde/MyPassPlus/releases';
+  static const String githubProjectUrl =
+      'https://github.com/rodolfo-verde/MyPassPlus';
 
   @override
   void initState() {
@@ -170,8 +169,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _openGitHubReleases() async {
-    final Uri url = Uri.parse(githubReleasesUrl);
+  Future<void> _openGitHubProject() async {
+    final Uri url = Uri.parse(githubProjectUrl);
     if (!await launchUrl(url)) {
       UIHelper.showSnackBar(S.current.failedToOpenUrl);
     }
@@ -206,16 +205,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
               ),
-              if (Platform.isWindows)
-                ListTile(
-                  title: Text(S.of(context).stayOnTop), // Localized string
-                  trailing: Switch(
-                    value: _stayOnTop,
-                    onChanged: (value) {
-                      _setStayOnTop(value);
-                    },
-                  ),
-                ),
+              ListTile(
+                title: Text(S.of(context).passwordSettings), // Localized string
+                trailing: Icon(Icons.lock),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => PasswordSettingsScreen()),
+                  );
+                },
+              ),
               ListTile(
                 title: Text(S.of(context).language), // Localized string
                 trailing: DropdownButton<String>(
@@ -237,6 +236,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   }).toList(),
                 ),
               ),
+              ListTile(
+                title: Text(S.of(context).localConnection), // Localized string
+                trailing: Icon(Icons.wifi),
+                onTap: () async {
+                  await _showRoleSelectionDialog(context);
+                },
+              ),
+              ListTile(
+                title: Text(S.of(context).importData), // Localized string
+                trailing: Icon(Icons.upload),
+                onTap: () async {
+                  await _temporarilyDisableStayOnTop(() async {
+                    await _importData(passwordManager, context);
+                  });
+                },
+              ),
+              ListTile(
+                title: Text(S.of(context).exportData), // Localized string
+                trailing: Icon(Icons.download),
+                onTap: () async {
+                  await _exportDataAsCSV(passwordManager, context);
+                },
+              ),
+              if (Platform.isWindows)
+                ListTile(
+                  title: Text(S.of(context).stayOnTop), // Localized string
+                  trailing: Switch(
+                    value: _stayOnTop,
+                    onChanged: (value) {
+                      _setStayOnTop(value);
+                    },
+                  ),
+                ),
               if (Platform.isWindows)
                 ListTile(
                   title:
@@ -273,39 +305,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     }).toList(),
                   ),
                 ),
-              ListTile(
-                title: Text(S.of(context).manageUsernames), // Localized string
-                trailing: Icon(Icons.arrow_forward),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => ManageUsernamesScreen()),
-                  );
-                },
-              ),
-              ListTile(
-                title: Text(S.of(context).localConnection), // Localized string
-                trailing: Icon(Icons.wifi),
-                onTap: () async {
-                  await _showRoleSelectionDialog(context);
-                },
-              ),
-              ListTile(
-                title: Text(S.of(context).exportData), // Localized string
-                trailing: Icon(Icons.download),
-                onTap: () async {
-                  await _exportDataAsCSV(passwordManager, context);
-                },
-              ),
-              ListTile(
-                title: Text(S.of(context).importData), // Localized string
-                trailing: Icon(Icons.upload),
-                onTap: () async {
-                  await _temporarilyDisableStayOnTop(() async {
-                    await _importData(passwordManager, context);
-                  });
-                },
-              ),
               if (Platform.isAndroid)
                 ListTile(
                   title: Text(
@@ -321,24 +320,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
               ListTile(
-                title: Text(S.of(context).checkForUpdates),
-                trailing: Icon(Icons.system_update),
-                onTap: _openGitHubReleases,
-              ),
-              ListTile(
-                title: Text(S.of(context).passwordSettings), // Localized string
-                trailing: Icon(Icons.lock),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => PasswordSettingsScreen()),
-                  );
-                },
+                title: Text(S.of(context).openProjectPage),
+                trailing: Icon(Icons.open_in_new),
+                onTap: _openGitHubProject,
               ),
               ListTile(
                 title: Text(S.of(context).version),
                 trailing: Text(
-                  '${_packageInfo?.version ?? ''}',
+                  _packageInfo?.version ?? '',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
