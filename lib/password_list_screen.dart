@@ -5,9 +5,12 @@ import 'password_manager.dart';
 import 'add_password.dart';
 import 'password_entry.dart';
 import 'settings_screen.dart';
+import 'manage_usernames.dart';
 import 'ui_helper.dart';
 import 'dart:io';
 import 'generated/l10n.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'version_checker.dart';
 
 class PasswordListScreen extends StatefulWidget {
   const PasswordListScreen({super.key});
@@ -29,6 +32,40 @@ class _PasswordListScreenState extends State<PasswordListScreen> {
         searchQuery = _searchController.text;
       });
     });
+    _checkForUpdates();
+  }
+
+  Future<void> _checkForUpdates() async {
+    final versions = await VersionChecker.hasNewerVersion();
+    if (versions != null && mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(S.of(context).newVersionAvailable),
+          content: Text(
+            '${S.of(context).newVersionMessage}\n\n'
+            '${S.of(context).version}: ${versions['currentVersion']} → ${versions['latestVersion']}',
+          ),
+          actions: [
+            TextButton(
+              child: Text(S.of(context).remindLater),
+              onPressed: () => Navigator.pop(context),
+            ),
+            TextButton(
+              child: Text(S.of(context).downloadNow),
+              onPressed: () {
+                launchUrl(
+                  Uri.parse(
+                      'https://github.com/rodolfo-verde/MyPassPlus/releases'),
+                  mode: LaunchMode.externalApplication,
+                );
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override
@@ -58,6 +95,16 @@ class _PasswordListScreenState extends State<PasswordListScreen> {
             onPressed: () {
               Navigator.push(context,
                   MaterialPageRoute(builder: (_) => AddPasswordScreen()));
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.person),
+            tooltip: S.of(context).manageUsernames,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => ManageUsernamesScreen()),
+              );
             },
           ),
           IconButton(
