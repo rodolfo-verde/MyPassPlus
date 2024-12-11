@@ -24,6 +24,7 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
       TextEditingController(text: '!@#\$%^&*()-_+=<>?');
   String? _selectedUsername;
   static const String defaultCustomSymbols = '!@#\$%^&*()-_+=<>?';
+  bool _saveUsername = false;
 
   bool _includeUppercase = true;
   bool _includeLowercase = true;
@@ -108,12 +109,26 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
               },
             ),
             if (_selectedUsername == S.of(context).enterNewUsername)
-              TextField(
-                controller: _userController,
-                decoration:
-                    InputDecoration(labelText: S.of(context).usernameLabel),
-                autocorrect: false,
-                enableSuggestions: false,
+              Column(
+                children: [
+                  TextField(
+                    controller: _userController,
+                    decoration:
+                        InputDecoration(labelText: S.of(context).usernameLabel),
+                    autocorrect: false,
+                    enableSuggestions: false,
+                  ),
+                  CheckboxListTile(
+                    value: _saveUsername,
+                    onChanged: (value) {
+                      setState(() {
+                        _saveUsername = value ?? false;
+                      });
+                    },
+                    title: Text(S.of(context).saveToCommonUsernames),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                ],
               ),
             TextField(
               controller: _passwordController,
@@ -285,6 +300,15 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
       }
 
       passwordManager.addEntry(newEntry);
+
+      // Add username to common usernames if checkbox is checked
+      if (_saveUsername &&
+          _selectedUsername == S.of(context).enterNewUsername &&
+          user.isNotEmpty) {
+        final usernameManager =
+            Provider.of<UsernameManager>(context, listen: false);
+        usernameManager.addUsername(user);
+      }
     } else {
       // Editing an existing entry
       passwordManager.editEntry(widget.entry!, newEntry);
