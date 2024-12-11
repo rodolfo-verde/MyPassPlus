@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
 import 'dart:typed_data'; // Import for Uint8List
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'password_manager.dart';
@@ -71,15 +72,19 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
   }
 
   Future<void> _discoverReceivers() async {
-    setState(() => _isSearching = true);
-    _availableReceivers.clear();
+    setState(() {
+      _isSearching = true;
+      _availableReceivers.clear();
+    });
 
     if (!mounted) return;
 
     try {
-      // Changed from port 0 to fixed port 4568
-      final socket =
-          await RawDatagramSocket.bind(InternetAddress.anyIPv4, 4568);
+      final socket = await RawDatagramSocket.bind(
+        InternetAddress.anyIPv4,
+        4568,
+        reuseAddress: true,
+      );
       socket.broadcastEnabled = true;
       _discoverySocket = socket;
 
@@ -91,50 +96,122 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
           Datagram? datagram = socket.receive();
           if (datagram != null) {
             String message = String.fromCharCodes(datagram.data);
+            print('Received discovery message: $message');
             if (message.startsWith('RECEIVER_HERE')) {
               List<String> parts = message.split(':');
               String receiverName =
                   parts.length > 1 ? parts[1] : datagram.address.address;
-              setState(() {
-                if (!_availableReceivers
-                    .any((r) => r.ip == datagram.address.address)) {
-                  _availableReceivers
-                      .add(Receiver(receiverName, datagram.address.address));
-                }
-              });
+              if (mounted) {
+                setState(() {
+                  if (!_availableReceivers
+                      .any((r) => r.ip == datagram.address.address)) {
+                    print(
+                        'Adding receiver: $receiverName at ${datagram.address.address}');
+                    _availableReceivers
+                        .add(Receiver(receiverName, datagram.address.address));
+                  }
+                });
+              }
             }
           }
         }
       });
 
-      // Send discovery message with device name
-      final deviceName = await _getDeviceName();
-      final discoveryMessage = 'DISCOVER_RECEIVERS:$deviceName';
-      socket.send(utf8.encode(discoveryMessage),
-          InternetAddress('255.255.255.255'), 4568);
+      // Send discovery messages
+      String deviceName = await _getDeviceName();
+      Timer.periodic(Duration(seconds: 1), (timer) async {
+        if (!mounted || !_isSearching) {
+          timer.cancel();
+          return;
+        }
+
+        final discoveryMessage = 'DISCOVER_RECEIVERS:$deviceName';
+        print('Sending discovery message: $discoveryMessage');
+
+        try {
+          // Send to broadcast address
+          socket.send(utf8.encode(discoveryMessage),
+              InternetAddress('255.255.255.255'), 4568);
+
+          // Send to all network interfaces
+          final interfaces = await NetworkInterface.list();
+          for (var interface in interfaces) {
+            for (var addr in interface.addresses) {
+              if (addr.type == InternetAddressType.IPv4) {
+                try {
+                  final prefixLength = _getPrefixLength(addr.address);
+                  final broadcast =
+                      _getBroadcastAddress(addr.address, prefixLength);
+                  socket.send(utf8.encode(discoveryMessage),
+                      InternetAddress(broadcast), 4568);
+                } catch (e) {
+                  print('Error sending to interface ${interface.name}: $e');
+                }
+              }
+            }
+          }
+        } catch (e) {
+          print('Error sending discovery message: $e');
+        }
+      });
+
+      // Stop searching after 5 seconds
+      await Future.delayed(Duration(seconds: 5));
+
+      if (mounted) {
+        setState(() => _isSearching = false);
+
+        if (_availableReceivers.isEmpty) {
+          UIHelper.showSnackBar(S.of(context).noReceiversFound);
+        } else {
+          _showReceiverSelectionDialog();
+        }
+      }
     } catch (e) {
       print('Error in discovery: $e');
       if (mounted) {
+        setState(() => _isSearching = false);
         UIHelper.showSnackBar('Error discovering receivers: $e');
       }
     }
+  }
 
-    await Future.delayed(Duration(seconds: 5));
-    if (!mounted) return;
+  String _getBroadcastAddress(String ipAddress, int prefixLength) {
+    final ipParts = ipAddress.split('.').map(int.parse).toList();
+    final ipNumber = (ipParts[0] << 24) |
+        (ipParts[1] << 16) |
+        (ipParts[2] << 8) |
+        ipParts[3];
+    final mask = ~((1 << (32 - prefixLength)) - 1);
+    final broadcastNumber = ipNumber | ~mask;
 
-    _discoverySocket?.close();
-    setState(() => _isSearching = false);
+    return [
+      (broadcastNumber >> 24) & 255,
+      (broadcastNumber >> 16) & 255,
+      (broadcastNumber >> 8) & 255,
+      broadcastNumber & 255,
+    ].join('.');
+  }
 
-    if (_availableReceivers.isEmpty) {
-      if (mounted) {
-        // Check before showing snackbar
-        UIHelper.showSnackBar(S.of(context).noReceiversFound);
+  int _getPrefixLength(String ipAddress) {
+    final parts = ipAddress.split('.');
+    if (parts.length != 4) return 24; // Default to /24 if invalid
+
+    try {
+      int prefix = 0;
+      for (var part in parts) {
+        int num = int.parse(part);
+        for (int i = 7; i >= 0; i--) {
+          if ((num & (1 << i)) != 0) {
+            prefix++;
+          } else {
+            break;
+          }
+        }
       }
-    } else {
-      if (mounted) {
-        // Check before showing dialog
-        _showReceiverSelectionDialog();
-      }
+      return prefix;
+    } catch (e) {
+      return 24; // Default to /24 if parsing fails
     }
   }
 
@@ -209,7 +286,6 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
     if (!mounted) return;
 
     try {
-      // Changed binding configuration
       final server = await ServerSocket.bind(
         InternetAddress.anyIPv4,
         4567,
@@ -218,6 +294,40 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
       _serverSocket = server;
       print('Server listening on ${server.address.address}:${server.port}');
 
+      // Set up discovery socket first
+      final discoverySocket = await RawDatagramSocket.bind(
+        InternetAddress.anyIPv4,
+        4568,
+        reuseAddress: true,
+      );
+      discoverySocket.broadcastEnabled = true;
+      _discoverySocket = discoverySocket;
+      print(
+          'Discovery socket bound to ${discoverySocket.address.address}:${discoverySocket.port}');
+
+      discoverySocket.listen((RawSocketEvent event) async {
+        if (event == RawSocketEvent.read) {
+          Datagram? datagram = discoverySocket.receive();
+          if (datagram != null) {
+            String message = String.fromCharCodes(datagram.data);
+            print('Received message: $message'); // Debug log
+            if (message.startsWith('DISCOVER_RECEIVERS')) {
+              try {
+                final deviceName = await _getDeviceName();
+                final response = 'RECEIVER_HERE:$deviceName';
+                print(
+                    'Sending response: $response to ${datagram.address}:${datagram.port}'); // Debug log
+                discoverySocket.send(
+                    utf8.encode(response), datagram.address, datagram.port);
+              } catch (e) {
+                print('Error sending response: $e');
+              }
+            }
+          }
+        }
+      });
+
+      // Rest of the server logic
       server.listen((Socket socket) async {
         if (!mounted) {
           socket.close();
@@ -290,32 +400,6 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
                   route.settings.name == 'PasswordListScreen' || route.isFirst);
         }
         await socket.close();
-      });
-
-      // Changed discovery socket binding
-      final discoverySocket = await RawDatagramSocket.bind(
-        InternetAddress.anyIPv4,
-        4568,
-        reuseAddress: true, // Added this option
-      );
-      discoverySocket.broadcastEnabled = true; // Added this line
-      _discoverySocket = discoverySocket;
-      print(
-          'Discovery socket bound to ${discoverySocket.address.address}:${discoverySocket.port}');
-
-      discoverySocket.listen((RawSocketEvent event) async {
-        if (event == RawSocketEvent.read) {
-          Datagram? datagram = discoverySocket.receive();
-          if (datagram != null) {
-            String message = String.fromCharCodes(datagram.data);
-            if (message.startsWith('DISCOVER_RECEIVERS')) {
-              final deviceName = await _getDeviceName();
-              final response = 'RECEIVER_HERE:$deviceName';
-              discoverySocket.send(
-                  utf8.encode(response), datagram.address, datagram.port);
-            }
-          }
-        }
       });
     } catch (e) {
       print('Error in receive setup: $e');
