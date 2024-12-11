@@ -16,6 +16,7 @@ import 'password_settings_screen.dart'; // Import PasswordSettingsScreen
 import 'local_connection_screen.dart'; // Import LocalConnectionScreen
 import 'generated/l10n.dart'; // Import localization
 import 'package:url_launcher/url_launcher.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -34,6 +35,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _includeHeader = true;
   String? _selectedDirectoryPath;
   String _selectedLanguage = 'en';
+  PackageInfo? _packageInfo;
 
   static const String githubReleasesUrl =
       'https://github.com/rodolfo-verde/MyPassPlus/releases';
@@ -43,6 +45,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     _loadPreferences();
     _loadLanguagePreference();
+    _initPackageInfo();
   }
 
   Future<void> _loadPreferences() async {
@@ -172,6 +175,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!await launchUrl(url)) {
       UIHelper.showSnackBar(S.current.failedToOpenUrl);
     }
+  }
+
+  Future<void> _initPackageInfo() async {
+    final info = await PackageInfo.fromPlatform();
+    setState(() {
+      _packageInfo = info;
+    });
   }
 
   @override
@@ -324,6 +334,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     MaterialPageRoute(builder: (_) => PasswordSettingsScreen()),
                   );
                 },
+              ),
+              ListTile(
+                title: Text(S.of(context).version),
+                trailing: Text(
+                  '${_packageInfo?.version ?? ''}',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
               ),
             ],
           ),
