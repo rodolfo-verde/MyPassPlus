@@ -41,6 +41,28 @@ Root: HKLM; Subkey: "Software\MyPassPlus"; ValueType: string; ValueName: "Versio
 const
   MyAppVersion = '0.0.3';
 
+function IsAppRunning(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  if not Exec('tasklist.exe', '/FI "IMAGENAME eq MyPass+.exe" /NH', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+  begin
+    Result := False;
+  end
+  else
+  begin
+    if (ResultCode = 0) then
+      Result := True
+    else
+      Result := False;
+  end;
+
+  if Result then
+  begin
+    MsgBox(ExpandConstant('{cm:AppIsRunningMsg}'), mbError, MB_OK);
+  end;
+end;
+
 function CompareVersions(Ver1, Ver2: string): Integer;
 var
   Pos1, Pos2, Len1, Len2, Num1, Num2: Integer;
@@ -94,9 +116,16 @@ var
   InstalledVersion: string;
   CompareResult: Integer;
 begin
-  Result := True; // Allow installation by default
+  Result := True;
   
-  // Check the registry for the installed version
+  // First check if the app is running
+  if IsAppRunning() then
+  begin
+    Result := False;
+    Exit;
+  end;
+  
+  // Then proceed with version check
   if RegQueryStringValue(HKLM, 'Software\MyPassPlus', 'Version', InstalledVersion) then
   begin
     CompareResult := CompareVersions(InstalledVersion, MyAppVersion);
@@ -117,3 +146,5 @@ spanish.ConfirmUninstall=Advertencia: Desinstalar %1 eliminará permanentemente 
 [CustomMessages]
 english.AlreadyInstalledMsg=A newer or the same version of MyPass+ is already installed. Uninstall it first before installing this version.
 spanish.AlreadyInstalledMsg=Ya hay una versión más nueva o la misma versión de MyPass+ instalada. Desinstálala primero antes de instalar esta versión.
+english.AppIsRunningMsg=MyPass+ is currently running. Please close the application before continuing with the installation.
+spanish.AppIsRunningMsg=MyPass+ se está ejecutando actualmente. Por favor, cierre la aplicación antes de continuar con la instalación.
