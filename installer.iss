@@ -43,23 +43,26 @@ const
 
 function IsAppRunning(): Boolean;
 var
+  FileName: string;
+  Output: AnsiString;
+  ExecResult: Boolean;
   ResultCode: Integer;
 begin
-  if not Exec('tasklist.exe', '/FI "IMAGENAME eq MyPass+.exe" /NH', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+  Result := False;
+  FileName := ExpandConstant('{tmp}\processlist.txt');
+  
+  if Exec('cmd.exe', '/c tasklist > "' + FileName + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
   begin
-    Result := False;
-  end
-  else
-  begin
-    if (ResultCode = 0) then
-      Result := True
-    else
-      Result := False;
-  end;
-
-  if Result then
-  begin
-    MsgBox(ExpandConstant('{cm:AppIsRunningMsg}'), mbError, MB_OK);
+    if LoadStringFromFile(FileName, Output) then
+    begin
+      // Look specifically for MyPass+.exe, avoiding matches with installer
+      if Pos('MyPass+.exe', Output) > 0 then
+      begin
+        Result := True;
+        MsgBox(ExpandConstant('{cm:AppIsRunningMsg}'), mbError, MB_OK);
+      end;
+    end;
+    DeleteFile(FileName);
   end;
 end;
 
