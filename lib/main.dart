@@ -19,12 +19,14 @@ final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Timer? _inactivityTimer;
-final int logoutDelay = 180;
+final int logoutDelay = 60;
 final _storage = FlutterSecureStorage();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  WidgetsBinding.instance.addObserver(LifecycleEventHandler());
+  if (Platform.isWindows && !(await _ensureSingleInstance())) {
+    exit(0);
+  }
   final prefs = await SharedPreferences.getInstance();
   final stayOnTop = prefs.getBool('stayOnTop') ?? false;
   final alignment = prefs.getString('alignment') ?? 'None';
@@ -63,6 +65,13 @@ void main() async {
       });
     });
   }
+}
+
+Future<bool> _ensureSingleInstance() async {
+  final result = await Process.run('tasklist', []);
+  final matches =
+      RegExp(r'MyPass+', caseSensitive: false).allMatches(result.stdout).length;
+  return matches < 2;
 }
 
 class MyApp extends StatelessWidget {
