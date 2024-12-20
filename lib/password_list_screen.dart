@@ -10,6 +10,7 @@ import 'ui_helper.dart';
 import 'dart:io';
 import 'generated/l10n.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'version_checker.dart';
 
 class PasswordListScreen extends StatefulWidget {
@@ -36,36 +37,45 @@ class _PasswordListScreenState extends State<PasswordListScreen> {
   }
 
   Future<void> _checkForUpdates() async {
+    if (Platform.isAndroid) {
+      final connectivity = await Connectivity().checkConnectivity();
+      if (connectivity != ConnectivityResult.wifi) return;
+    }
+
     final versions = await VersionChecker.hasNewerVersion();
     if (versions != null && mounted) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(S.of(context).newVersionAvailable),
-          content: Text(
-            '${S.of(context).newVersionMessage}\n\n'
-            '${S.of(context).version}: ${versions['currentVersion']} → ${versions['latestVersion']}',
-          ),
-          actions: [
-            TextButton(
-              child: Text(S.of(context).remindLater),
-              onPressed: () => Navigator.pop(context),
-            ),
-            TextButton(
-              child: Text(S.of(context).downloadNow),
-              onPressed: () {
-                launchUrl(
-                  Uri.parse(
-                      'https://github.com/rodolfo-verde/MyPassPlus/releases'),
-                  mode: LaunchMode.externalApplication,
-                );
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        ),
-      );
+      _showUpdateDialog(versions);
     }
+  }
+
+  void _showUpdateDialog(Map<String, String> versions) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(S.of(context).newVersionAvailable),
+        content: Text(
+          '${S.of(context).newVersionMessage}\n\n'
+          '${S.of(context).version}: ${versions['currentVersion']} → ${versions['latestVersion']}',
+        ),
+        actions: [
+          TextButton(
+            child: Text(S.of(context).remindLater),
+            onPressed: () => Navigator.pop(context),
+          ),
+          TextButton(
+            child: Text(S.of(context).downloadNow),
+            onPressed: () {
+              launchUrl(
+                Uri.parse(
+                    'https://github.com/rodolfo-verde/MyPassPlus/releases'),
+                mode: LaunchMode.externalApplication,
+              );
+              Navigator.pop(context);
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   @override
