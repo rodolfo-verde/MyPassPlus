@@ -106,8 +106,8 @@ jobs:
 
       - name: Rename artifacts
         run: |
-          mv app-release.apk mypass-${{ steps.version.outputs.version }}-android.apk
-          mv MyPass+Installer.exe mypass-${{ steps.version.outputs.version }}-windows.exe
+          mv app-release.apk mypass+-${{ steps.version.outputs.version }}-android.apk
+          mv MyPass+Installer.exe mypass+-${{ steps.version.outputs.version }}-windows.exe
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -119,10 +119,10 @@ jobs:
             Built on ${{ github.event.repository.updated_at }}
             
             ### Downloads
-            - Windows Installer: mypass-${{ steps.version.outputs.version }}-windows.exe
-            - Android APK: mypass-${{ steps.version.outputs.version }}-android.apk
+            - Windows Installer: mypass+-${{ steps.version.outputs.version }}-windows.exe
+            - Android APK: mypass+-${{ steps.version.outputs.version }}-android.apk
           files: |
-            mypass-${{ steps.version.outputs.version }}-android.apk
-            mypass-${{ steps.version.outputs.version }}-windows.exe
+            mypass+-${{ steps.version.outputs.version }}-android.apk
+            mypass+-${{ steps.version.outputs.version }}-windows.exe
           draft: false
           prerelease: false
