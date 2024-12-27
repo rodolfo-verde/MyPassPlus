@@ -1,5 +1,15 @@
 # MyPass+
 
+<div align="center">
+  <a href="https://www.openapk.net/mypassplus/com.rfvc.mypassplus/">
+    <img src="https://www.openapk.net/images/openapk-badge.png" alt="Download on OpenAPK" width="150">
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://www.androidfreeware.net/download-mypassplus-apk.html">
+    <img src="https://www.androidfreeware.net/images/androidfreeware-badge.png" alt="Download on AndroidFreeware" width="150">
+  </a>
+</div>
+
 [English](README.md) | [Español](docs/README.es.md)
 
 A simple and secure password manager for Windows and Android that helps you store and organize your passwords.
@@ -24,10 +34,17 @@ A simple and secure password manager for Windows and Android that helps you stor
 2. Download the windows installer from the latest release
 3. Run the installer and follow the instructions
 
+> **Note**: When running the installer, Windows may show a "Windows protected your PC" message. This is normal for new applications. To proceed:
+> 1. Click "More info"
+> 2. Click "Run anyway"
+> 3. The installer will then start normally
+
 ### Android
 1. Go to the [Releases](../../releases) page
 2. Download the APK file from the latest release
 3. Open the APK on your Android device to install
+
+The app is also listed on OpenAPK and AndroidFreeware (see badges above). These listings are synced with our GitHub releases.
 
 ## ⭐ Features
 

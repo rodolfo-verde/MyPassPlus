@@ -1,5 +1,15 @@
 # MyPass+
 
+<div align="center">
+  <a href="https://www.openapk.net/mypassplus/com.rfvc.mypassplus/">
+    <img src="https://www.openapk.net/images/openapk-badge.png" alt="Descargar en OpenAPK" width="150">
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://www.androidfreeware.net/download-mypassplus-apk.html">
+    <img src="https://www.androidfreeware.net/images/androidfreeware-badge.png" alt="Descargar en AndroidFreeware" width="150">
+  </a>
+</div>
+
 [English](../README.md) | [Español](README.es.md)
 
 Un administrador de contraseñas simple y seguro para Windows y Android que te ayuda a almacenar y organizar tus contraseñas.
@@ -24,10 +34,17 @@ Un administrador de contraseñas simple y seguro para Windows y Android que te a
 2. Descarga el instalador de Windows de la versión más reciente
 3. Ejecuta el instalador y sigue las instrucciones
 
+> **Nota**: Al ejecutar el instalador, Windows puede mostrar un mensaje de "Windows Defender SmartScreen ha impedido iniciar una aplicación desconocida". Esto es normal para aplicaciones nuevas. Para continuar:
+> 1. Haz clic en "Más información"
+> 2. Haz clic en "Ejecutar de todas formas"
+> 3. El instalador comenzará normalmente
+
 ### Android
 1. Ve a la página de [Lanzamientos](../../../releases)
 2. Descarga el archivo APK de la versión más reciente
 3. Abre el APK en tu dispositivo Android para instalar
+
+La aplicación también está listada en OpenAPK y AndroidFreeware (ver insignias arriba). Estos listados están sincronizados con nuestros lanzamientos de GitHub.
 
 ## ⭐ Funcionalidades
 
