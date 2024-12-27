@@ -337,16 +337,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (_isPickingFile)
           ModalBarrier(
             dismissible: false,
-            color: Colors.black.withOpacity(0.5),
+            color: Colors.black.withAlpha(128), // Changed from withOpacity(0.5)
           ),
       ],
     );
-  }
-
-  Future<void> _deleteAllData(PasswordManager passwordManager) async {
-    await passwordManager.clearAllEntries();
-    UIHelper.showSnackBar(
-        S.current.allDataDeletedSuccessfully); // Localized string
   }
 
   Future<void> _exportDataAsCSV(
@@ -619,7 +613,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 if (_isModalVisible)
                   ModalBarrier(
                     dismissible: false,
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black
+                        .withAlpha(128), // Changed from withOpacity(0.5)
                   ),
               ],
             );
