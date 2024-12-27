@@ -6,12 +6,6 @@ import 'username_manager.dart';
 class ManageUsernamesScreen extends StatelessWidget {
   const ManageUsernamesScreen({super.key});
 
-  void _showErrorDialog(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final usernameManager = Provider.of<UsernameManager>(context);
