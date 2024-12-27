@@ -45,9 +45,10 @@ class LocalConnectionScreen extends StatefulWidget {
 }
 
 class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
+  static const defaultEncryptionKey = 'your_32_characters_long_key_here';
   String _receiverIp = '';
   final _encryptionKey = const String.fromEnvironment('ENCRYPTION_KEY',
-      defaultValue: 'your_32_characters_long_key_here');
+      defaultValue: defaultEncryptionKey);
   final List<Receiver> _availableReceivers = [];
   ServerSocket? _serverSocket;
   RawDatagramSocket? _discoverySocket;
@@ -96,7 +97,8 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
           Datagram? datagram = socket.receive();
           if (datagram != null) {
             String message = String.fromCharCodes(datagram.data);
-            print('Received discovery message: $message');
+            print(
+                'Received discovery message: $message from ${datagram.address.address}:${datagram.port}');
             if (message.startsWith('RECEIVER_HERE')) {
               List<String> parts = message.split(':');
               String receiverName =
@@ -117,33 +119,38 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
         }
       });
 
-      // Send discovery messages
-      String deviceName = await _getDeviceName();
-      Timer.periodic(Duration(seconds: 1), (timer) async {
+      // Send discovery messages periodically
+      Timer.periodic(Duration(milliseconds: 500), (timer) async {
         if (!mounted || !_isSearching) {
           timer.cancel();
           return;
         }
 
+        final deviceName = await _getDeviceName();
         final discoveryMessage = 'DISCOVER_RECEIVERS:$deviceName';
-        print('Sending discovery message: $discoveryMessage');
 
         try {
-          // Send to broadcast address
-          socket.send(utf8.encode(discoveryMessage),
-              InternetAddress('255.255.255.255'), 4568);
-
-          // Send to all network interfaces
+          // Send to broadcast addresses on all network interfaces
           final interfaces = await NetworkInterface.list();
           for (var interface in interfaces) {
+            // Skip loopback interfaces
+            if (interface.name.toLowerCase().contains('loopback')) continue;
+
             for (var addr in interface.addresses) {
               if (addr.type == InternetAddressType.IPv4) {
                 try {
-                  final prefixLength = _getPrefixLength(addr.address);
-                  final broadcast =
-                      _getBroadcastAddress(addr.address, prefixLength);
+                  // Send to direct broadcast
                   socket.send(utf8.encode(discoveryMessage),
-                      InternetAddress(broadcast), 4568);
+                      InternetAddress('255.255.255.255'), 4568);
+
+                  // Send to subnet broadcast
+                  final broadcast = _calculateBroadcastAddress(addr);
+                  if (broadcast != null) {
+                    socket.send(utf8.encode(discoveryMessage),
+                        InternetAddress(broadcast), 4568);
+                    print(
+                        'Sent discovery to broadcast $broadcast on ${interface.name}');
+                  }
                 } catch (e) {
                   print('Error sending to interface ${interface.name}: $e');
                 }
@@ -151,16 +158,15 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
             }
           }
         } catch (e) {
-          print('Error sending discovery message: $e');
+          print('Error in discovery broadcast: $e');
         }
       });
 
-      // Stop searching after 5 seconds
-      await Future.delayed(Duration(seconds: 5));
+      // Extend discovery time to 10 seconds
+      await Future.delayed(Duration(seconds: 7));
 
       if (mounted) {
         setState(() => _isSearching = false);
-
         if (_availableReceivers.isEmpty) {
           UIHelper.showSnackBar(S.of(context).noReceiversFound);
         } else {
@@ -168,7 +174,7 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
         }
       }
     } catch (e) {
-      print('Error in discovery: $e');
+      print('Error in discovery setup: $e');
       if (mounted) {
         setState(() => _isSearching = false);
         UIHelper.showSnackBar('Error discovering receivers: $e');
@@ -176,43 +182,30 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
     }
   }
 
-  String _getBroadcastAddress(String ipAddress, int prefixLength) {
-    final ipParts = ipAddress.split('.').map(int.parse).toList();
-    final ipNumber = (ipParts[0] << 24) |
-        (ipParts[1] << 16) |
-        (ipParts[2] << 8) |
-        ipParts[3];
-    final mask = ~((1 << (32 - prefixLength)) - 1);
-    final broadcastNumber = ipNumber | ~mask;
-
-    return [
-      (broadcastNumber >> 24) & 255,
-      (broadcastNumber >> 16) & 255,
-      (broadcastNumber >> 8) & 255,
-      broadcastNumber & 255,
-    ].join('.');
-  }
-
-  int _getPrefixLength(String ipAddress) {
-    final parts = ipAddress.split('.');
-    if (parts.length != 4) return 24; // Default to /24 if invalid
-
+  String? _calculateBroadcastAddress(InternetAddress address) {
     try {
-      int prefix = 0;
-      for (var part in parts) {
-        int num = int.parse(part);
-        for (int i = 7; i >= 0; i--) {
-          if ((num & (1 << i)) != 0) {
-            prefix++;
-          } else {
-            break;
-          }
+      final parts = address.address.split('.');
+      if (parts.length != 4) return null;
+
+      // Common subnet masks
+      final masks = ['255.255.255.0', '255.255.0.0'];
+
+      for (var mask in masks) {
+        final maskParts = mask.split('.');
+        final result = List<int>.filled(4, 0);
+
+        for (var i = 0; i < 4; i++) {
+          final addressByte = int.parse(parts[i]);
+          final maskByte = int.parse(maskParts[i]);
+          result[i] = addressByte | (~maskByte & 255);
         }
+
+        return result.join('.');
       }
-      return prefix;
     } catch (e) {
-      return 24; // Default to /24 if parsing fails
+      print('Error calculating broadcast address: $e');
     }
+    return null;
   }
 
   void _showReceiverSelectionDialog() {
@@ -447,27 +440,44 @@ class _LocalConnectionScreenState extends State<LocalConnectionScreen> {
         ? S.of(context).searchingForReceivers
         : S.of(context).waitingForSender;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(S.of(context).localConnection),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (widget.isSender && !_isSearching) ...[
-              ElevatedButton(
-                onPressed: _discoverReceivers,
-                child: Text(S.of(context).retry),
-              ),
-            ] else ...[
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text(statusMessage),
-            ],
-          ],
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppBar(
+            title: Text(S.of(context).localConnection),
+          ),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (_encryptionKey == defaultEncryptionKey) ...[
+                  Container(
+                    width: double.infinity,
+                    color: Colors.red,
+                    padding: EdgeInsets.all(8),
+                    child: Text(
+                      'DEBUG MODE - Insecure Default Encryption Key',
+                      style: TextStyle(color: Colors.white),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                ],
+                if (widget.isSender && !_isSearching) ...[
+                  ElevatedButton(
+                    onPressed: _discoverReceivers,
+                    child: Text(S.of(context).retry),
+                  ),
+                ] else ...[
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text(statusMessage),
+                ],
+              ],
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 }
