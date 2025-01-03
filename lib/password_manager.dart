@@ -37,12 +37,11 @@ class PasswordManager extends ChangeNotifier {
     List<PasswordEntry> filtered = _entries
         .where((entry) => entry.key.toLowerCase().contains(query.toLowerCase()))
         .toList();
-    filtered.sort((a, b) {
-      if (a.isStarred && !b.isStarred) return -1;
-      if (!a.isStarred && b.isStarred) return 1;
-      return 0;
-    });
-    return filtered;
+    List<PasswordEntry> started =
+        filtered.where((entry) => entry.isStarred).toList();
+    List<PasswordEntry> nonStarred =
+        filtered.where((entry) => !entry.isStarred).toList();
+    return started + nonStarred;
   }
 
   Future<void> clearEntries() async {
