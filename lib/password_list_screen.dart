@@ -218,19 +218,19 @@ class PasswordEntryTile extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              icon: Icon(Icons.vpn_key),
-              tooltip: S.of(context).copyPasswordTooltip,
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: entry.password));
-                UIHelper.showSnackBar(S.of(context).passwordCopiedMessage);
-              },
-            ),
-            IconButton(
               icon: Icon(Icons.person),
               tooltip: S.of(context).copyUsernameTooltip,
               onPressed: () {
                 Clipboard.setData(ClipboardData(text: entry.user));
                 UIHelper.showSnackBar(S.of(context).usernameCopiedMessage);
+              },
+            ),
+            IconButton(
+              icon: Icon(Icons.vpn_key),
+              tooltip: S.of(context).copyPasswordTooltip,
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: entry.password));
+                UIHelper.showSnackBar(S.of(context).passwordCopiedMessage);
               },
             ),
             PopupMenuButton<String>(
