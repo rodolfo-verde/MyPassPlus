@@ -81,7 +81,6 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
             TextField(
               controller: _keyController,
               decoration: InputDecoration(labelText: S.of(context).keyLabel),
-              enabled: widget.entry == null, // Disable key field if editing
               autocorrect: false,
               enableSuggestions: false,
             ),
@@ -270,7 +269,13 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
   void _savePassword(BuildContext context, PasswordManager passwordManager) {
     final key = _keyController.text.trim().toUpperCase();
     final user = _userController.text.trim();
-    final password = _passwordController.text.trim();
+    final password = _passwordController.text;
+
+    // set the trimmed key to the gui
+    setState(() {
+      _keyController.text = key;
+      _userController.text = user;
+    });
 
     if (key.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -286,32 +291,33 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
       isStarred: _isStarred,
     );
 
+    bool keyExists = passwordManager.entries
+        .any((entry) => entry.key == key && entry != widget.entry);
+
+    if (keyExists) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(S.of(context).keyExistsMessage),
+        ),
+      );
+      return;
+    }
+
     if (widget.entry == null) {
       // Adding a new entry
-      bool keyExists = passwordManager.entries.any((entry) => entry.key == key);
-
-      if (keyExists) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(S.of(context).keyExistsMessage),
-          ),
-        );
-        return;
-      }
-
       passwordManager.addEntry(newEntry);
-
-      // Add username to common usernames if checkbox is checked
-      if (_saveUsername &&
-          _selectedUsername == S.of(context).enterNewUsername &&
-          user.isNotEmpty) {
-        final usernameManager =
-            Provider.of<UsernameManager>(context, listen: false);
-        usernameManager.addUsername(user);
-      }
     } else {
       // Editing an existing entry
       passwordManager.editEntry(widget.entry!, newEntry);
+    }
+
+    // Add username to common usernames if checkbox is checked
+    if (_saveUsername &&
+        _selectedUsername == S.of(context).enterNewUsername &&
+        user.isNotEmpty) {
+      final usernameManager =
+          Provider.of<UsernameManager>(context, listen: false);
+      usernameManager.addUsername(user);
     }
 
     Navigator.pop(context);
